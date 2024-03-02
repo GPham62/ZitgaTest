@@ -8,5 +8,6 @@ namespace Data
     {
         public Vector2 pos;
         public Cell cellComp;
+        public CellData prevCell;
     }
 }

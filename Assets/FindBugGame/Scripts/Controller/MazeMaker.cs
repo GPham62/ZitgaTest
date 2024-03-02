@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Utils;
 
 public class MazeMaker : MonoBehaviour
 {
@@ -23,23 +24,23 @@ public class MazeMaker : MonoBehaviour
     private CellData m_tempCell;
 
     private Vector2[] m_neighBourRelativePositions;
-    //private float m_cellSize;
+
+    private Camera m_cam;
 
     //square 64 pixel with 100 px per unit
     private float m_cellSize = 0.64f;
     private float m_wallSize = 0.064f;
 
+    #region MazeGenerateLogic
     // Start is called before the first frame update
-    void Start()
+    public void Init()
     {
         InitValues();
         CreateMazeLayout();
         ResizeBackground();
+        AutoFitCamera();
         GenerateMaze();
     }
-
-    private float m_backgroundWidth;
-    private float m_backgroundHeight;
 
     private void InitValues()
     {
@@ -67,17 +68,17 @@ public class MazeMaker : MonoBehaviour
             spawnPos.x += distanceBetweenCells * 2;
         }
         m_cornerCells[0] = m_cells[Vector2.zero];
-        m_cornerCells[0].cellComp.HideWall(Cell.WallDirection.Right);
-        m_cornerCells[0].cellComp.HideWall(Cell.WallDirection.Down);
+        m_cornerCells[0].cellComp.HideWall(Direction.Right);
+        m_cornerCells[0].cellComp.HideWall(Direction.Down);
         m_cornerCells[1] = m_cells[new Vector2(columns - 1, 0)];
-        m_cornerCells[1].cellComp.HideWall(Cell.WallDirection.Left);
-        m_cornerCells[1].cellComp.HideWall(Cell.WallDirection.Down);
+        m_cornerCells[1].cellComp.HideWall(Direction.Left);
+        m_cornerCells[1].cellComp.HideWall(Direction.Down);
         m_cornerCells[2] = m_cells[new Vector2(0, rows - 1)];
-        m_cornerCells[2].cellComp.HideWall(Cell.WallDirection.Right);
-        m_cornerCells[2].cellComp.HideWall(Cell.WallDirection.Up);
+        m_cornerCells[2].cellComp.HideWall(Direction.Right);
+        m_cornerCells[2].cellComp.HideWall(Direction.Up);
         m_cornerCells[3] = m_cells[new Vector2(columns - 1, rows - 1)];
-        m_cornerCells[3].cellComp.HideWall(Cell.WallDirection.Left);
-        m_cornerCells[3].cellComp.HideWall(Cell.WallDirection.Up);
+        m_cornerCells[3].cellComp.HideWall(Direction.Left);
+        m_cornerCells[3].cellComp.HideWall(Direction.Up);
     }
 
     private void GenerateCell(Vector2 spawnPos, Vector2 positionInGrid)
@@ -103,6 +104,12 @@ public class MazeMaker : MonoBehaviour
             (rows * m_cellSize + rows * m_wallSize) / backgroundHeight);
     }
 
+    private void AutoFitCamera()
+    {
+        m_cam = Camera.main;
+    }
+
+
     private void GenerateMaze()
     {
         //BFS logic
@@ -121,11 +128,11 @@ public class MazeMaker : MonoBehaviour
             List<CellData> unvisitedNeighbours = GetUnvisitedNeighbours();
             if (unvisitedNeighbours.Count > 0)
             {
-                CellData cellA = unvisitedNeighbours[UnityEngine.Random.Range(0, unvisitedNeighbours.Count)];
+                m_tempCell = unvisitedNeighbours[UnityEngine.Random.Range(0, unvisitedNeighbours.Count)];
                 //5.Break the wall between N and A.
-                BreakWallBetween(cellA, m_currentCell);
+                BreakWallBetween(m_tempCell, m_currentCell);
                 //6.Assign the value A to N.
-                m_currentCell = cellA;
+                m_currentCell = m_tempCell;
                 //7.Go to step 2.
                 m_queue.Enqueue(m_currentCell);
                 m_unvisitedCells.Remove(m_currentCell);
@@ -142,23 +149,23 @@ public class MazeMaker : MonoBehaviour
     {
         if (cell1.pos.x < cell2.pos.x)
         {
-            cell1.cellComp.HideWall(Cell.WallDirection.Right);
-            cell2.cellComp.HideWall(Cell.WallDirection.Left);
+            cell1.cellComp.HideWall(Direction.Right);
+            cell2.cellComp.HideWall(Direction.Left);
         }
         else if (cell1.pos.x > cell2.pos.x)
         {
-            cell1.cellComp.HideWall(Cell.WallDirection.Left);
-            cell2.cellComp.HideWall(Cell.WallDirection.Right);
+            cell1.cellComp.HideWall(Direction.Left);
+            cell2.cellComp.HideWall(Direction.Right);
         }
         else if (cell1.pos.y > cell2.pos.y)
         {
-            cell1.cellComp.HideWall(Cell.WallDirection.Up);
-            cell2.cellComp.HideWall(Cell.WallDirection.Down);
+            cell1.cellComp.HideWall(Direction.Up);
+            cell2.cellComp.HideWall(Direction.Down);
         }
         else if (cell1.pos.y < cell2.pos.y)
         {
-            cell1.cellComp.HideWall(Cell.WallDirection.Down);
-            cell2.cellComp.HideWall(Cell.WallDirection.Up);
+            cell1.cellComp.HideWall(Direction.Down);
+            cell2.cellComp.HideWall(Direction.Up);
         }
     }
 
@@ -168,11 +175,28 @@ public class MazeMaker : MonoBehaviour
         foreach (Vector2 neighbourRelativePos in m_neighBourRelativePositions)
         {
             Vector2 neighbourPos = m_currentCell.pos + neighbourRelativePos;
-            if (m_cells.ContainsKey(neighbourPos)) {
+            if (IsPositionWithinMaze(neighbourPos)) {
                 CellData neighbourCell = m_cells[neighbourPos];
                 if (m_unvisitedCells.Contains(neighbourCell)) unvisitedNeighbours.Add(neighbourCell);
             }
         }
         return unvisitedNeighbours;
+    }
+
+    #endregion
+
+    public Transform GetMazePositionTransform(Vector2 pos)
+    {
+        return m_cells[pos].cellComp.gameObject.transform;
+    }
+
+    public CellData GetCellByPosition(Vector2 pos)
+    {
+        return m_cells[pos];
+    }
+
+    public bool IsPositionWithinMaze(Vector2 pos)
+    {
+        return m_cells.ContainsKey(pos);
     }
 }
