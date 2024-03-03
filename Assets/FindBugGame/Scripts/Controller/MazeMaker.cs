@@ -28,8 +28,8 @@ public class MazeMaker : MonoBehaviour
     private Camera m_cam;
 
     //square 64 pixel with 100 px per unit
-    private float m_cellSize = 0.64f;
-    private float m_wallSize = 0.064f;
+    public float cellSize = 0.64f;
+    public float wallSize = 0.064f;
 
     #region MazeGenerateLogic
     // Start is called before the first frame update
@@ -53,7 +53,7 @@ public class MazeMaker : MonoBehaviour
 
     private void CreateMazeLayout()
     {
-        float distanceBetweenCells = m_cellSize / 2 + m_wallSize / 2;
+        float distanceBetweenCells = cellSize / 2 + wallSize / 2;
         Vector2 startPos = new Vector2(distanceBetweenCells, -distanceBetweenCells);
 
         Vector2 spawnPos = startPos;
@@ -100,14 +100,16 @@ public class MazeMaker : MonoBehaviour
         float backgroundHeight = backgroundSprite.bounds.size.y;
         m_background.position = Vector3.zero;
         m_background.localScale = new Vector2(
-            (columns * m_cellSize + columns * m_wallSize) / backgroundWidth,
-            (rows * m_cellSize + rows * m_wallSize) / backgroundHeight);
+            (columns * cellSize + columns * wallSize) / backgroundWidth,
+            (rows * cellSize + rows * wallSize) / backgroundHeight);
     }
 
     private void AutoFitCamera()
     {
         m_cam = Camera.main;
-    }
+        Vector2 centerPos = GetMazePositionTransform(new Vector2((int)(columns / 2) - 1, (int)(rows / 2))).position;
+        m_cam.transform.position = new Vector3(centerPos.x + cellSize/2, centerPos.y, -10);
+;    }
 
 
     private void GenerateMaze()

@@ -8,16 +8,20 @@ using Utils;
 
 public class PathFinder : MonoBehaviour
 {
+    [SerializeField] private Transform m_hintHolder;
     [SerializeField] private MazeMaker m_mazeMaker;
     [SerializeField] private Button m_findButton;
     [SerializeField] private Button m_autoMoveButton;
     [SerializeField] private GameObject m_verticalHintPrefab;
     [SerializeField] private GameObject m_horizontalHintPrefab;
+    private GameObject m_player;
+    private Stack<GameObject> m_hints;
+    private Stack<CellData> m_result;
     private CellData m_startCell, m_goalCell, m_currentCell, m_tempCell;
     private Stack<CellData> m_stack = new Stack<CellData>();
     [SerializeField] private List<CellData> m_visitedCells;
     private Vector2[] m_neighBourRelativePositions = new Vector2[] { new Vector2(-1, 0), new Vector2(1, 0), new Vector2(0, 1), new Vector2(0, -1) };
-private void Start()
+    private void Start()
     {
         m_findButton.onClick.AddListener(ShowPath);
         m_autoMoveButton.onClick.AddListener(MovePlayerToGoal);
@@ -25,21 +29,60 @@ private void Start()
 
     private void ShowPath()
     {
-        CellData prevCell = m_goalCell.prevCell;
-        while (prevCell != null)
+        m_hints = new Stack<GameObject>();
+        m_tempCell = m_goalCell.prevCell;
+        while (m_tempCell != null)
         {
-            //prevCell.cellComp.ShowHint(prevCell.pos.x < m_currentCell.pos.x || prevCell.pos.x > m_currentCell.pos.x);
-            m_currentCell = prevCell;
-            prevCell = prevCell.prevCell;
+            GameObject hint = null;
+            if (m_tempCell.pos.x < m_currentCell.pos.x)
+            {
+                hint = Instantiate(m_horizontalHintPrefab,
+                    new Vector3(m_currentCell.cellComp.transform.position.x - m_mazeMaker.cellSize / 2 - m_mazeMaker.wallSize / 2, 
+                    m_currentCell.cellComp.transform.position.y, m_player.transform.position.z),
+                    Quaternion.identity, m_hintHolder);
+                
+            }
+            else if (m_tempCell.pos.x > m_currentCell.pos.x)
+            {
+                hint = Instantiate(m_horizontalHintPrefab,
+                       new Vector3(m_currentCell.cellComp.transform.position.x + m_mazeMaker.cellSize / 2 + m_mazeMaker.wallSize / 2,
+                       m_currentCell.cellComp.transform.position.y, m_player.transform.position.z),
+                       Quaternion.identity, m_hintHolder);
+            }
+            else if (m_tempCell.pos.y < m_currentCell.pos.y)
+            {
+                hint = Instantiate(m_verticalHintPrefab,
+                       new Vector3(m_currentCell.cellComp.transform.position.x,
+                       m_currentCell.cellComp.transform.position.y + m_mazeMaker.cellSize / 2 + m_mazeMaker.wallSize / 2, m_player.transform.position.z),
+                       Quaternion.identity, m_hintHolder);
+            }
+            else
+            {
+                hint = Instantiate(m_verticalHintPrefab,
+                       new Vector3(m_currentCell.cellComp.transform.position.x,
+                       m_currentCell.cellComp.transform.position.y - m_mazeMaker.cellSize / 2 - m_mazeMaker.wallSize / 2, m_player.transform.position.z),
+                       Quaternion.identity, m_hintHolder);
+            }
+            m_hints.Push(hint);
+            m_result.Push(m_tempCell);
+            m_currentCell = m_tempCell;
+            m_tempCell = m_tempCell.prevCell;
         }
     }
 
     private void MovePlayerToGoal()
     {
+        StartCoroutine(MovePlayerToGoalRoutine());
     }
 
-    internal void Init(Vector3 startPos, Vector3 endPos)
+    private IEnumerator MovePlayerToGoalRoutine()
     {
+        yield return null;
+    }
+
+    internal void Init(GameObject player, Vector3 startPos, Vector3 endPos)
+    {
+        m_player = player;
         m_visitedCells = new List<CellData>();
         m_startCell = m_mazeMaker.GetCellByPosition(startPos);
         m_goalCell = m_mazeMaker.GetCellByPosition(endPos);
@@ -64,9 +107,7 @@ private void Start()
                 m_stack.Push(m_currentCell);
                 m_visitedCells.Add(m_currentCell);
                 if (m_tempCell == m_goalCell)
-                {
                     break;
-                }
             }
             else
             {
@@ -110,19 +151,4 @@ private void Start()
             return cell1.cellComp.IsWallActive(Direction.Down) || cell2.cellComp.IsWallActive(Direction.Up);
         }
     }
-
-    //private List<CellData> GetUnvisitedNeighbours()
-    //{
-    //    List<CellData> unvisitedNeighbours = new List<CellData>();
-    //    foreach (Vector2 neighbourRelativePos in m_neighBourRelativePositions)
-    //    {
-    //        Vector2 neighbourPos = m_currentCell.pos + neighbourRelativePos;
-    //        if (m_mazeMaker.IsPositionWithinMaze(neighbourPos))
-    //        {
-    //            CellData neighbourCell = m_mazeMaker.GetCellByPosition(neighbourPos);
-    //            if (!m_visitedCells.Contains(neighbourCell)) unvisitedNeighbours.Add(neighbourCell);
-    //        }
-    //    }
-    //    return unvisitedNeighbours;
-    //}
 }

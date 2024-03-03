@@ -102,8 +102,6 @@ MonoBehaviour:
   wallRight: {fileID: 3705340678802950817}
   wallUp: {fileID: 799734982418856971}
   wallDown: {fileID: 3538766260148932690}
-  hintVertical: {fileID: 0}
-  hintHorizontal: {fileID: 0}
   m_sprite: {fileID: 326282222954278750}
 --- !u!1001 &5542061366543987124
 PrefabInstance:

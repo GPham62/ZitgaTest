@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace UI
@@ -108,12 +109,10 @@ namespace UI
         {
             if (!m_data.isLocked)
             {
-                if (GameManager.instance.player.stageUnlocked == m_data.level)
-                {
-                    GameManager.instance.player.stageUnlocked++;
-                    GameManager.instance.Save();
-                    Debug.Log("UNLOCK NEW LEVEL");
-                }
+                GameManager.instance.player.stageUnlocked++;
+                GameManager.instance.Save();
+                Debug.Log("UNLOCK NEW LEVEL");
+                SceneManager.LoadScene("GamePlay", LoadSceneMode.Single);
             }
         }
     }
