@@ -1,4 +1,5 @@
 ﻿using Data;
+using DG.Tweening;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -15,8 +16,8 @@ public class PathFinder : MonoBehaviour
     [SerializeField] private GameObject m_verticalHintPrefab;
     [SerializeField] private GameObject m_horizontalHintPrefab;
     private GameObject m_player;
-    private Stack<GameObject> m_hints;
-    private Stack<CellData> m_result;
+    private List<GameObject> m_hints;
+    private List<CellData> m_result;
     private CellData m_startCell, m_goalCell, m_currentCell, m_tempCell;
     private Stack<CellData> m_stack = new Stack<CellData>();
     [SerializeField] private List<CellData> m_visitedCells;
@@ -29,55 +30,26 @@ public class PathFinder : MonoBehaviour
 
     private void ShowPath()
     {
-        m_hints = new Stack<GameObject>();
-        m_tempCell = m_goalCell.prevCell;
-        while (m_tempCell != null)
+        foreach (var hint in m_hints)
         {
-            GameObject hint = null;
-            if (m_tempCell.pos.x < m_currentCell.pos.x)
-            {
-                hint = Instantiate(m_horizontalHintPrefab,
-                    new Vector3(m_currentCell.cellComp.transform.position.x - m_mazeMaker.cellSize / 2 - m_mazeMaker.wallSize / 2, 
-                    m_currentCell.cellComp.transform.position.y, m_player.transform.position.z),
-                    Quaternion.identity, m_hintHolder);
-                
-            }
-            else if (m_tempCell.pos.x > m_currentCell.pos.x)
-            {
-                hint = Instantiate(m_horizontalHintPrefab,
-                       new Vector3(m_currentCell.cellComp.transform.position.x + m_mazeMaker.cellSize / 2 + m_mazeMaker.wallSize / 2,
-                       m_currentCell.cellComp.transform.position.y, m_player.transform.position.z),
-                       Quaternion.identity, m_hintHolder);
-            }
-            else if (m_tempCell.pos.y < m_currentCell.pos.y)
-            {
-                hint = Instantiate(m_verticalHintPrefab,
-                       new Vector3(m_currentCell.cellComp.transform.position.x,
-                       m_currentCell.cellComp.transform.position.y + m_mazeMaker.cellSize / 2 + m_mazeMaker.wallSize / 2, m_player.transform.position.z),
-                       Quaternion.identity, m_hintHolder);
-            }
-            else
-            {
-                hint = Instantiate(m_verticalHintPrefab,
-                       new Vector3(m_currentCell.cellComp.transform.position.x,
-                       m_currentCell.cellComp.transform.position.y - m_mazeMaker.cellSize / 2 - m_mazeMaker.wallSize / 2, m_player.transform.position.z),
-                       Quaternion.identity, m_hintHolder);
-            }
-            m_hints.Push(hint);
-            m_result.Push(m_tempCell);
-            m_currentCell = m_tempCell;
-            m_tempCell = m_tempCell.prevCell;
+            hint.SetActive(true);
+            SpriteRenderer hintSprite = hint.GetComponent<SpriteRenderer>();
+            Color tmp = hintSprite.color;
+            tmp.a = 0f;
+            hintSprite.color = tmp;
+            hintSprite.DOFade(1, 0.3f);
         }
     }
 
     private void MovePlayerToGoal()
     {
-        StartCoroutine(MovePlayerToGoalRoutine());
-    }
-
-    private IEnumerator MovePlayerToGoalRoutine()
-    {
-        yield return null;
+        if (Vector2.Distance(m_player.transform.position, m_goalCell.cellComp.transform.position) < 0.1f) return;
+        //StartCoroutine(MovePlayerToGoalRoutine());
+        Sequence sequence = DOTween.Sequence();
+        for (int i = m_result.Count - 1; i >= 0; i--)
+        {
+            sequence.Append(m_player.transform.DOMove(m_result[i].cellComp.transform.position, 0.3f));
+        }
     }
 
     internal void Init(GameObject player, Vector3 startPos, Vector3 endPos)
@@ -113,6 +85,53 @@ public class PathFinder : MonoBehaviour
             {
                 m_currentCell = m_stack.Count > 0 ? m_stack.Pop() : null;
             }
+        }
+        SpawnInactiveHints();
+    }
+
+    private void SpawnInactiveHints()
+    {
+        m_hints = new List<GameObject>();
+        m_result = new List<CellData>();
+        m_tempCell = m_goalCell.prevCell;
+        m_result.Add(m_goalCell);
+        while (m_tempCell != null)
+        {
+            GameObject hint = null;
+            if (m_tempCell.pos.x < m_currentCell.pos.x)
+            {
+                hint = Instantiate(m_horizontalHintPrefab,
+                    new Vector3(m_currentCell.cellComp.transform.position.x - m_mazeMaker.cellSize / 2 - m_mazeMaker.wallSize / 2,
+                    m_currentCell.cellComp.transform.position.y, m_player.transform.position.z),
+                    Quaternion.identity, m_hintHolder);
+
+            }
+            else if (m_tempCell.pos.x > m_currentCell.pos.x)
+            {
+                hint = Instantiate(m_horizontalHintPrefab,
+                       new Vector3(m_currentCell.cellComp.transform.position.x + m_mazeMaker.cellSize / 2 + m_mazeMaker.wallSize / 2,
+                       m_currentCell.cellComp.transform.position.y, m_player.transform.position.z),
+                       Quaternion.identity, m_hintHolder);
+            }
+            else if (m_tempCell.pos.y < m_currentCell.pos.y)
+            {
+                hint = Instantiate(m_verticalHintPrefab,
+                       new Vector3(m_currentCell.cellComp.transform.position.x,
+                       m_currentCell.cellComp.transform.position.y + m_mazeMaker.cellSize / 2 + m_mazeMaker.wallSize / 2, m_player.transform.position.z),
+                       Quaternion.identity, m_hintHolder);
+            }
+            else
+            {
+                hint = Instantiate(m_verticalHintPrefab,
+                       new Vector3(m_currentCell.cellComp.transform.position.x,
+                       m_currentCell.cellComp.transform.position.y - m_mazeMaker.cellSize / 2 - m_mazeMaker.wallSize / 2, m_player.transform.position.z),
+                       Quaternion.identity, m_hintHolder);
+            }
+            hint.SetActive(false);
+            m_hints.Add(hint);
+            m_result.Add(m_tempCell);
+            m_currentCell = m_tempCell;
+            m_tempCell = m_tempCell.prevCell;
         }
     }
 
