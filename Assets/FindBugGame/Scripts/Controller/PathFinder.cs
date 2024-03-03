@@ -15,9 +15,10 @@ public class PathFinder : MonoBehaviour
     [SerializeField] private Button m_autoMoveButton;
     [SerializeField] private GameObject m_verticalHintPrefab;
     [SerializeField] private GameObject m_horizontalHintPrefab;
+    [SerializeField] private float m_moveSpeed = 5f;
     private GameObject m_player;
-    private List<GameObject> m_hints;
-    private List<CellData> m_result;
+    private Stack<GameObject> m_hints;
+    private Stack<CellData> m_result;
     private CellData m_startCell, m_goalCell, m_currentCell, m_tempCell;
     private Stack<CellData> m_stack = new Stack<CellData>();
     [SerializeField] private List<CellData> m_visitedCells;
@@ -44,12 +45,51 @@ public class PathFinder : MonoBehaviour
     private void MovePlayerToGoal()
     {
         if (Vector2.Distance(m_player.transform.position, m_goalCell.cellComp.transform.position) < 0.1f) return;
-        //StartCoroutine(MovePlayerToGoalRoutine());
-        Sequence sequence = DOTween.Sequence();
-        for (int i = m_result.Count - 1; i >= 0; i--)
+        StartCoroutine(MoveToGoalRoutine());
+    }
+
+    private IEnumerator MoveToGoalRoutine()
+    {
+        while (m_result.Count > 0)
         {
-            sequence.Append(m_player.transform.DOMove(m_result[i].cellComp.transform.position, 0.3f));
+            if (m_hints.Count > 0)
+            {
+                SpriteRenderer hint = m_hints.Pop().GetComponent<SpriteRenderer>();
+                hint.DOFade(0, 0.3f).OnComplete(() => hint.gameObject.SetActive(false));
+            }
+
+            Vector3 targetPosition = m_result.Pop().cellComp.transform.position + new Vector3(0, 0, m_player.transform.position.z);
+            float time = 0;
+            Vector3 startPosition = m_player.transform.position;
+            LookAtDirection(startPosition, targetPosition);
+            float duration = m_mazeMaker.cellSize / (2  * m_moveSpeed);
+            while (time < duration)
+            {
+                m_player.transform.position = Vector3.Lerp(startPosition, targetPosition, time / duration);
+                time += Time.deltaTime;
+                yield return null;
+            }
+            m_player.transform.position = targetPosition;
         }
+        
+    }
+
+    private void LookAtDirection(Vector3 startPosition, Vector3 targetPosition)
+    {
+        if (targetPosition.x > startPosition.x)
+        {
+            m_player.transform.rotation = Quaternion.Euler(0, 0, -90);
+        }
+        else if(targetPosition.x < startPosition.x)
+        {
+            m_player.transform.rotation = Quaternion.Euler(0, 0, 90);
+        }
+        else if (targetPosition.y < startPosition.y) 
+        {
+            m_player.transform.rotation = Quaternion.Euler(0, 0, 180);
+        }
+        else
+            m_player.transform.rotation = Quaternion.Euler(0, 0, 0);
     }
 
     internal void Init(GameObject player, Vector3 startPos, Vector3 endPos)
@@ -91,10 +131,10 @@ public class PathFinder : MonoBehaviour
 
     private void SpawnInactiveHints()
     {
-        m_hints = new List<GameObject>();
-        m_result = new List<CellData>();
+        m_hints = new Stack<GameObject>();
+        m_result = new Stack<CellData>();
         m_tempCell = m_goalCell.prevCell;
-        m_result.Add(m_goalCell);
+        m_result.Push(m_goalCell);
         while (m_tempCell != null)
         {
             GameObject hint = null;
@@ -102,7 +142,7 @@ public class PathFinder : MonoBehaviour
             {
                 hint = Instantiate(m_horizontalHintPrefab,
                     new Vector3(m_currentCell.cellComp.transform.position.x - m_mazeMaker.cellSize / 2 - m_mazeMaker.wallSize / 2,
-                    m_currentCell.cellComp.transform.position.y, m_player.transform.position.z),
+                    m_currentCell.cellComp.transform.position.y, -0.15f),
                     Quaternion.identity, m_hintHolder);
 
             }
@@ -110,26 +150,26 @@ public class PathFinder : MonoBehaviour
             {
                 hint = Instantiate(m_horizontalHintPrefab,
                        new Vector3(m_currentCell.cellComp.transform.position.x + m_mazeMaker.cellSize / 2 + m_mazeMaker.wallSize / 2,
-                       m_currentCell.cellComp.transform.position.y, m_player.transform.position.z),
+                       m_currentCell.cellComp.transform.position.y, -0.15f),
                        Quaternion.identity, m_hintHolder);
             }
             else if (m_tempCell.pos.y < m_currentCell.pos.y)
             {
                 hint = Instantiate(m_verticalHintPrefab,
                        new Vector3(m_currentCell.cellComp.transform.position.x,
-                       m_currentCell.cellComp.transform.position.y + m_mazeMaker.cellSize / 2 + m_mazeMaker.wallSize / 2, m_player.transform.position.z),
+                       m_currentCell.cellComp.transform.position.y + m_mazeMaker.cellSize / 2 + m_mazeMaker.wallSize / 2, -0.15f),
                        Quaternion.identity, m_hintHolder);
             }
             else
             {
                 hint = Instantiate(m_verticalHintPrefab,
                        new Vector3(m_currentCell.cellComp.transform.position.x,
-                       m_currentCell.cellComp.transform.position.y - m_mazeMaker.cellSize / 2 - m_mazeMaker.wallSize / 2, m_player.transform.position.z),
+                       m_currentCell.cellComp.transform.position.y - m_mazeMaker.cellSize / 2 - m_mazeMaker.wallSize / 2, -0.15f),
                        Quaternion.identity, m_hintHolder);
             }
             hint.SetActive(false);
-            m_hints.Add(hint);
-            m_result.Add(m_tempCell);
+            m_hints.Push(hint);
+            m_result.Push(m_tempCell);
             m_currentCell = m_tempCell;
             m_tempCell = m_tempCell.prevCell;
         }
